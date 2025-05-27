@@ -9,19 +9,26 @@ local config = {
     espSettings = {
         enabled = false,
         showDistance = true,
+        showRarity = true,
         maxDistance = 1000,
         updateInterval = 0.5,
         textSize = 14,
         textColor = Color3.fromRGB(255, 255, 255),
         outlineColor = Color3.fromRGB(0, 0, 0),
-        trackAllOres = false
+        trackAllOres = true,
+        simulatePresence = false,
+        simulationRadius = 200
     },
     
     -- Bring Settings
     bringSettings = {
         enabled = false,
         bringInterval = 0.2,
-        bringDistance = 5
+        bringDistance = 5,
+        bringSpeed = 2,
+        bringAuraEnabled = false,
+        bringAuraRadius = 50,
+        bringAuraSpeed = 3
     },
     
     -- UI Settings

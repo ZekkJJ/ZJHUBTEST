@@ -5,7 +5,7 @@
 ]]--
 
 -- Main script URL
-local MAIN_SCRIPT_URL = 'https://raw.githubusercontent.com/NitezTJS/ZJHub/refs/heads/main/main.lua'
+local MAIN_SCRIPT_URL = 'https://raw.githubusercontent.com/ZekkJJ/ZJHUBTEST/refs/heads/main/main.lua'
 
 -- Load
 local success, result = pcall(function()

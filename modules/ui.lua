@@ -100,6 +100,31 @@ function ui.init(modules)
             
             -- Start or stop the bring loop
             if value then
+                -- Check if any ores are selected
+                local anySelected = false
+                for _, selected in pairs(ores.selected) do
+                    if selected then
+                        anySelected = true
+                        break
+                    end
+                end
+                
+                if not anySelected then
+                    Rayfield:Notify({
+                        Title = "No Ores Selected",
+                        Content = "Please select at least one ore type to bring.",
+                        Duration = 3,
+                    })
+                    config.bringSettings.enabled = false
+                    return
+                end
+                
+                Rayfield:Notify({
+                    Title = "Bringing Ores",
+                    Content = "Now bringing selected ores to you. Toggle off to stop.",
+                    Duration = 3,
+                })
+                
                 -- Create a loop to bring ores
                 spawn(function()
                     while config.bringSettings.enabled do
@@ -107,6 +132,12 @@ function ui.init(modules)
                         wait(config.bringSettings.bringInterval)
                     end
                 end)
+            else
+                Rayfield:Notify({
+                    Title = "Stopped Bringing",
+                    Content = "No longer bringing ores to you.",
+                    Duration = 2,
+                })
             end
         end,
     })
@@ -135,10 +166,158 @@ function ui.init(modules)
         end,
     })
     
+    BringTab:CreateSlider({
+        Name = "Bring Speed",
+        Range = {0.5, 4},
+        Increment = 0.5,
+        Suffix = "x",
+        CurrentValue = config.bringSettings.bringSpeed,
+        Flag = "BringSpeed",
+        Callback = function(value)
+            config.bringSettings.bringSpeed = value
+        end,
+    })
+    
     BringTab:CreateButton({
         Name = "Bring Selected Ores Once",
         Callback = function()
-            ores.bringSelectedOres()
+            local success, message = ores.bringAllItems()
+            if message then
+                Rayfield:Notify({
+                    Title = success and "Success" or "Error",
+                    Content = message,
+                    Duration = 3,
+                })
+            end
+        end,
+    })
+    
+    BringTab:CreateSection("Bring Aura")
+    
+    BringTab:CreateToggle({
+        Name = "Enable Bring Aura",
+        CurrentValue = config.bringSettings.bringAuraEnabled,
+        Flag = "BringAuraEnabled",
+        Callback = function(value)
+            config.bringSettings.bringAuraEnabled = value
+            
+            if value then
+                -- Check if any ores are selected
+                local anySelected = false
+                for _, selected in pairs(ores.selected) do
+                    if selected then
+                        anySelected = true
+                        break
+                    end
+                end
+                
+                if not anySelected then
+                    Rayfield:Notify({
+                        Title = "No Ores Selected",
+                        Content = "Please select at least one ore type for Bring Aura.",
+                        Duration = 3,
+                    })
+                    config.bringSettings.bringAuraEnabled = false
+                    return
+                end
+                
+                Rayfield:Notify({
+                    Title = "Bring Aura Enabled",
+                    Content = "Bring Aura will automatically collect nearby selected ores.",
+                    Duration = 3,
+                })
+                
+                -- Create a loop for bring aura
+                spawn(function()
+                    local utils = require("utils")
+                    
+                    while config.bringSettings.bringAuraEnabled do
+                        local playerPos = utils.getPlayerPosition()
+                        if playerPos then
+                            -- Find all ores in the workspace
+                            if workspace and workspace:FindFirstChild("Items") then
+                                for _, item in pairs(workspace.Items:GetChildren()) do
+                                    if ores.isSelected(item) then
+                                        -- Get item position
+                                        local itemPosition
+                                        if item:IsA("Model") and item.PrimaryPart then
+                                            itemPosition = item.PrimaryPart.Position
+                                        elseif item:IsA("BasePart") then
+                                            itemPosition = item.Position
+                                        else
+                                            continue
+                                        end
+                                        
+                                        -- Check if ore is within aura radius
+                                        local distance = utils.getDistance(playerPos, itemPosition)
+                                        if distance <= config.bringSettings.bringAuraRadius then
+                                            -- Determine which part to tween
+                                            local tweenPart
+                                            if item:IsA("Model") and item.PrimaryPart then
+                                                tweenPart = item.PrimaryPart
+                                            elseif item:IsA("BasePart") then
+                                                tweenPart = item
+                                            else
+                                                continue
+                                            end
+                                            
+                                            -- Calculate tween duration based on distance and speed
+                                            local limitedSpeed = math.min(config.bringSettings.bringAuraSpeed, 4)
+                                            local duration = distance / (50 * limitedSpeed)
+                                            
+                                            -- Create and play tween
+                                            local tween = utils.createTween(
+                                                tweenPart,
+                                                {
+                                                    time = duration,
+                                                    easing = Enum.EasingStyle.Quad,
+                                                    direction = Enum.EasingDirection.Out
+                                                },
+                                                {
+                                                    CFrame = CFrame.new(playerPos)
+                                                }
+                                            )
+                                            tween:Play()
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        
+                        wait(0.5) -- Wait before next aura check
+                    end
+                end)
+            else
+                Rayfield:Notify({
+                    Title = "Bring Aura Disabled",
+                    Content = "Bring Aura has been turned off.",
+                    Duration = 2,
+                })
+            end
+        end,
+    })
+    
+    BringTab:CreateSlider({
+        Name = "Aura Radius",
+        Range = {10, 200},
+        Increment = 10,
+        Suffix = " studs",
+        CurrentValue = config.bringSettings.bringAuraRadius,
+        Flag = "BringAuraRadius",
+        Callback = function(value)
+            config.bringSettings.bringAuraRadius = value
+        end,
+    })
+    
+    BringTab:CreateSlider({
+        Name = "Aura Speed",
+        Range = {0.5, 4},
+        Increment = 0.5,
+        Suffix = "x",
+        CurrentValue = config.bringSettings.bringAuraSpeed,
+        Flag = "BringAuraSpeed",
+        Callback = function(value)
+            config.bringSettings.bringAuraSpeed = value
         end,
     })
     
@@ -198,10 +377,44 @@ function ui.init(modules)
         end,
     })
     
-    -- Additional ESP information
+    -- Simulation Controls
+    ESPTab:CreateSection("Simulation Controls")
+    
+    ESPTab:CreateToggle({
+        Name = "Enable Simulation Mode",
+        CurrentValue = config.espSettings.simulatePresence,
+        Flag = "SimulatePresence",
+        Callback = function(value)
+            config.espSettings.simulatePresence = value
+            esp.toggleSimulatePresence(value)
+        end,
+    })
+    
     ESPTab:CreateParagraph({
-        Title = "ESP Information",
-        Content = "The ESP will show all selected ores within the specified distance. You can select specific ores in the Ores tab."
+        Title = "What is Simulation Mode?",
+        Content = "Simulation Mode creates temporary invisible parts around your character to reveal ores in a larger area. This helps you find ores that might be hidden or out of your normal ESP range."
+    })
+    
+    ESPTab:CreateSlider({
+        Name = "Simulation Radius",
+        Range = {50, 300},
+        Increment = 25,
+        Suffix = " studs",
+        CurrentValue = config.espSettings.simulationRadius,
+        Flag = "SimulationRadius",
+        Callback = function(value)
+            config.espSettings.simulationRadius = value
+            esp.setSimulationRadius(value)
+        end,
+    })
+    
+    ESPTab:CreateToggle({
+        Name = "Show Ore Rarity",
+        CurrentValue = config.espSettings.showRarity,
+        Flag = "ShowRarity",
+        Callback = function(value)
+            config.espSettings.showRarity = value
+        end,
     })
     
     -- Tools Tab
