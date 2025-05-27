@@ -233,12 +233,15 @@ function ores.setBringing(state)
     bringingItems = state
 end
 
--- Bring selected ores to the player
+-- Simple bring function that directly brings ores to the player
 function ores.bringSelectedOres()
     local utils = require("utils")
     local config = require("config")
     
-    if not workspace or not workspace:FindFirstChild("Items") or bringingItems then return end
+    -- Don't run if already bringing items or if Items folder doesn't exist
+    if bringingItems or not workspace:FindFirstChild("Items") then
+        return false, "Cannot bring items right now"
+    end
     
     -- Check if any ores are selected
     local anySelected = false
@@ -253,107 +256,73 @@ function ores.bringSelectedOres()
         return false, "No ores selected"
     end
     
+    -- Get player position
     local Players = game:GetService("Players")
     local Player = Players.LocalPlayer
     local character = Player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return false, "Character not found" end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then
+        return false, "Character not found"
+    end
     
     local rootPosition = character.HumanoidRootPart.Position
     
-    -- Get all items from the Items folder
-    local items = workspace.Items:GetChildren()
+    -- Find selected ores
     local selectedItems = {}
-    
-    -- Filter for selected ores
-    for _, item in ipairs(items) do
+    for _, item in pairs(workspace.Items:GetChildren()) do
         if ores.isSelected(item) then
             table.insert(selectedItems, item)
         end
     end
     
     local itemCount = #selectedItems
-    
     if itemCount == 0 then
         return false, "No selected ores found"
     end
     
     bringingItems = true
     
-    -- Process items with a slight delay between each to prevent lag
-    local processedItems = 0
-    local function processNextItem()
-        processedItems = processedItems + 1
-        
-        if processedItems > itemCount then
-            -- All items processed
-            bringingItems = false
-            return true, "Successfully brought " .. itemCount .. " ores"
-        end
-        
-        local item = selectedItems[processedItems]
-        if not item or not item.Parent then
-            -- Skip invalid items
-            task.spawn(processNextItem)
-            return
-        end
-        
-        -- Calculate target position (offset from player)
-        local angle = (processedItems / itemCount) * (2 * math.pi)
-        local offsetX = math.cos(angle) * config.bringSettings.bringDistance
-        local offsetZ = math.sin(angle) * config.bringSettings.bringDistance
+    -- Bring all items at once
+    local TweenService = game:GetService("TweenService")
+    local bringDistance = config.bringSettings.bringDistance or 5
+    
+    for i, item in ipairs(selectedItems) do
+        -- Calculate position around player in a circle
+        local angle = (i / itemCount) * (2 * math.pi)
+        local offsetX = math.cos(angle) * bringDistance
+        local offsetZ = math.sin(angle) * bringDistance
         local targetPosition = rootPosition + Vector3.new(offsetX, 0, offsetZ)
         
-        -- Get item position and create tween
-        local itemPosition
-        if item:IsA("Model") and item.PrimaryPart then
-            itemPosition = item.PrimaryPart.Position
-        elseif item:IsA("BasePart") then
-            itemPosition = item.Position
-        else
-            -- Skip non-physical items
-            task.spawn(processNextItem)
-            return
-        end
-        
-        -- Calculate tween duration based on distance and speed (with max speed limit)
-        local distance = (itemPosition - targetPosition).Magnitude
-        local limitedSpeed = math.min(config.bringSettings.bringSpeed, 4) -- Limit max speed to 4
-        local duration = distance / (50 * limitedSpeed) -- Adjust for speed
-        
         -- Determine which part to tween
-        local tweenPart
+        local part
         if item:IsA("Model") and item.PrimaryPart then
-            tweenPart = item.PrimaryPart
+            part = item.PrimaryPart
         elseif item:IsA("BasePart") then
-            tweenPart = item
+            part = item
         else
-            -- Skip non-physical items
-            task.spawn(processNextItem)
-            return
+            continue -- Skip items without physical representation
         end
         
         -- Create and play tween
-        local tween = utils.createTween(
-            tweenPart,
-            {
-                time = duration,
-                easing = Enum.EasingStyle.Quad,
-                direction = Enum.EasingDirection.Out
-            },
-            {
-                CFrame = CFrame.new(targetPosition)
-            }
+        local tweenInfo = TweenInfo.new(
+            0.5, -- Time (0.5 seconds is fast but not instant)
+            Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out
         )
-        tween:Play()
         
-        -- Process next item after tween completes
-        tween.Completed:Connect(function()
-            task.spawn(processNextItem)
-        end)
+        local tween = TweenService:Create(
+            part,
+            tweenInfo,
+            {CFrame = CFrame.new(targetPosition)}
+        )
+        
+        tween:Play()
     end
     
-    -- Start processing items
-    task.spawn(processNextItem)
+    -- Reset bringing state after a short delay
+    task.delay(0.6, function()
+        bringingItems = false
+    end)
+    
     return true, "Bringing " .. itemCount .. " ores"
 end
 

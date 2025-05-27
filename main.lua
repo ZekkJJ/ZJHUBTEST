@@ -8,7 +8,7 @@
 ]]--
 
 -- Constants
-local CURRENT_VERSION = "1.5"
+local CURRENT_VERSION = "1.6"
 local scriptName = "ZJHub_" .. math.random(1000, 9999)
 
 -- Module URLs - Replace these with your actual URLs after obfuscating and hosting each module

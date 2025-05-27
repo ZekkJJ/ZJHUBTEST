@@ -15,9 +15,7 @@ local config = {
         textSize = 14,
         textColor = Color3.fromRGB(255, 255, 255),
         outlineColor = Color3.fromRGB(0, 0, 0),
-        trackAllOres = true,
-        simulatePresence = false,
-        simulationRadius = 200
+        trackAllOres = true
     },
     
     -- Bring Settings

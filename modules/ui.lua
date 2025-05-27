@@ -227,59 +227,52 @@ function ui.init(modules)
                     Duration = 3,
                 })
                 
-                -- Create a loop for bring aura
+                -- Create a simple loop for bring aura
                 spawn(function()
-                    local utils = require("utils")
+                    local TweenService = game:GetService("TweenService")
+                    local Players = game:GetService("Players")
+                    local Player = Players.LocalPlayer
                     
                     while config.bringSettings.bringAuraEnabled do
-                        local playerPos = utils.getPlayerPosition()
-                        if playerPos then
-                            -- Find all ores in the workspace
-                            if workspace and workspace:FindFirstChild("Items") then
-                                for _, item in pairs(workspace.Items:GetChildren()) do
-                                    if ores.isSelected(item) then
-                                        -- Get item position
-                                        local itemPosition
-                                        if item:IsA("Model") and item.PrimaryPart then
-                                            itemPosition = item.PrimaryPart.Position
-                                        elseif item:IsA("BasePart") then
-                                            itemPosition = item.Position
-                                        else
-                                            continue
-                                        end
-                                        
-                                        -- Check if ore is within aura radius
-                                        local distance = utils.getDistance(playerPos, itemPosition)
-                                        if distance <= config.bringSettings.bringAuraRadius then
-                                            -- Determine which part to tween
-                                            local tweenPart
-                                            if item:IsA("Model") and item.PrimaryPart then
-                                                tweenPart = item.PrimaryPart
-                                            elseif item:IsA("BasePart") then
-                                                tweenPart = item
-                                            else
-                                                continue
-                                            end
-                                            
-                                            -- Calculate tween duration based on distance and speed
-                                            local limitedSpeed = math.min(config.bringSettings.bringAuraSpeed, 4)
-                                            local duration = distance / (50 * limitedSpeed)
-                                            
-                                            -- Create and play tween
-                                            local tween = utils.createTween(
-                                                tweenPart,
-                                                {
-                                                    time = duration,
-                                                    easing = Enum.EasingStyle.Quad,
-                                                    direction = Enum.EasingDirection.Out
-                                                },
-                                                {
-                                                    CFrame = CFrame.new(playerPos)
-                                                }
-                                            )
-                                            tween:Play()
-                                        end
-                                    end
+                        -- Only proceed if player character exists
+                        local character = Player.Character
+                        if not character or not character:FindFirstChild("HumanoidRootPart") then
+                            wait(0.5)
+                            continue
+                        end
+                        
+                        local playerPos = character.HumanoidRootPart.Position
+                        
+                        -- Only proceed if Items folder exists
+                        if workspace:FindFirstChild("Items") then
+                            for _, item in pairs(workspace.Items:GetChildren()) do
+                                -- Only process selected ores
+                                if not ores.isSelected(item) then continue end
+                                
+                                -- Get item position
+                                local itemPosition
+                                local part
+                                
+                                if item:IsA("Model") and item.PrimaryPart then
+                                    itemPosition = item.PrimaryPart.Position
+                                    part = item.PrimaryPart
+                                elseif item:IsA("BasePart") then
+                                    itemPosition = item.Position
+                                    part = item
+                                else
+                                    continue
+                                end
+                                
+                                -- Check if ore is within aura radius
+                                local distance = (itemPosition - playerPos).Magnitude
+                                if distance <= config.bringSettings.bringAuraRadius then
+                                    -- Create and play simple tween
+                                    local tween = TweenService:Create(
+                                        part,
+                                        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                        {CFrame = CFrame.new(playerPos)}
+                                    )
+                                    tween:Play()
                                 end
                             end
                         end
@@ -377,35 +370,10 @@ function ui.init(modules)
         end,
     })
     
-    -- Simulation Controls
-    ESPTab:CreateSection("Simulation Controls")
-    
-    ESPTab:CreateToggle({
-        Name = "Enable Simulation Mode",
-        CurrentValue = config.espSettings.simulatePresence,
-        Flag = "SimulatePresence",
-        Callback = function(value)
-            config.espSettings.simulatePresence = value
-            esp.toggleSimulatePresence(value)
-        end,
-    })
-    
+    -- ESP Information
     ESPTab:CreateParagraph({
-        Title = "What is Simulation Mode?",
-        Content = "Simulation Mode creates temporary invisible parts around your character to reveal ores in a larger area. This helps you find ores that might be hidden or out of your normal ESP range."
-    })
-    
-    ESPTab:CreateSlider({
-        Name = "Simulation Radius",
-        Range = {50, 300},
-        Increment = 25,
-        Suffix = " studs",
-        CurrentValue = config.espSettings.simulationRadius,
-        Flag = "SimulationRadius",
-        Callback = function(value)
-            config.espSettings.simulationRadius = value
-            esp.setSimulationRadius(value)
-        end,
+        Title = "ESP Information",
+        Content = "The ESP will show all selected ores within the specified distance. You can select specific ores in the Ores tab."
     })
     
     ESPTab:CreateToggle({
