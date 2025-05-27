@@ -81,10 +81,15 @@ function utils.setupAntiDetection(scriptName)
     end)
 end
 
--- Version checking function
+-- Version checking function (DISABLED FOR DEVELOPMENT)
 function utils.checkVersion(currentVersion)
+    -- DEV MODE: Always return true to bypass version checking
+    print("[DEV MODE] Version checking disabled for development")
+    return true
+    
+    --[[ ORIGINAL VERSION CHECK CODE (DISABLED)
     -- Define version URL - using a reliable URL that exists
-    local VERSION_URL = "https://raw.githubusercontent.com/ZekkJJ/ZJHUBTEST/refs/heads/main/version"
+    local VERSION_URL = "https://raw.githubusercontent.com/NitezTJS/ZJHub/refs/heads/main/version"
     
     -- Try to get the latest version
     local success, result = pcall(function()
@@ -128,6 +133,7 @@ function utils.checkVersion(currentVersion)
     end
     
     return true
+    --]]
 end
 
 -- Get distance between two Vector3 positions
