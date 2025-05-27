@@ -84,7 +84,7 @@ end
 -- Version checking function
 function utils.checkVersion(currentVersion)
     -- Define version URL - using a reliable URL that exists
-    local VERSION_URL = "https://raw.githubusercontent.com/NitezTJS/ZJHub/refs/heads/main/version"
+    local VERSION_URL = "https://raw.githubusercontent.com/ZekkJJ/ZJHUBTEST/refs/heads/main/version"
     
     -- Try to get the latest version
     local success, result = pcall(function()
